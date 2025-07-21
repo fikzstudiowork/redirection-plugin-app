@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirection Rules Match Plugin</title>
+    <!-- Tailwind CSS for professional styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS (xlsx) library for Excel generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .file-input-label {
+            transition: all 0.2s ease-in-out;
+        }
+        .file-input-label:hover {
+            background-color: #e2e8f0;
+            border-color: #4f46e5;
+        }
+        /* Modal styles */
+        .modal-overlay {
+            transition: opacity 0.3s ease;
+        }
+        .modal-container {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="fixed inset-0 bg-slate-100 z-50 flex items-center justify-center">
+        <div class="w-full max-w-md p-8 space-y-6 bg-white shadow-xl rounded-2xl">
+            <div>
+                <h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-slate-900">
+                    Plugin Access
+                </h2>
+                <p class="mt-2 text-center text-sm text-slate-600">
+                    Built by fikzdev
+                </p>
+            </div>
+            
+            <!-- Login Mode Selection -->
+            <div id="login-mode-selection">
+                <div class="grid grid-cols-1 gap-4">
+                    <button id="show-admin-login-btn" class="w-full justify-center rounded-md border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">Login as Admin</button>
+                    <button id="show-user-login-btn" class="w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-3 text-sm font-medium text-white hover:bg-indigo-700">Login as Normal User</button>
+                </div>
+            </div>
+
+            <!-- Login Form Container (hidden by default) -->
+            <div id="login-form-container" class="hidden">
+                 <button id="back-to-login-mode" class="text-sm font-medium text-indigo-600 hover:text-indigo-500 mb-4">&larr; Back</button>
+                <form id="login-form" class="space-y-6">
+                    <div class="rounded-md shadow-sm -space-y-px">
+                        <div>
+                            <label for="username" class="sr-only">Username</label>
+                            <input id="username" name="username" type="text" required class="relative block w-full appearance-none rounded-none rounded-t-md border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm" placeholder="Username">
+                        </div>
+                        <div>
+                            <label for="api-credential" class="sr-only">Password</label>
+                            <input id="api-credential" name="api-credential" type="password" required class="relative block w-full appearance-none rounded-none rounded-b-md border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm" placeholder="Password / API Credential">
+                        </div>
+                    </div>
+                    <p id="login-error" class="text-sm text-red-600 text-center hidden">Invalid username or password.</p>
+                    <div>
+                        <button type="submit" class="group relative flex w-full justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                            Sign in
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Main Application (hidden by default) -->
+    <div id="main-app" class="hidden">
+        <div class="container mx-auto p-4 md:p-8">
+            <header class="flex justify-between items-center mb-8">
+                 <div class="text-left">
+                     <h1 class="text-3xl md:text-4xl font-bold text-slate-900">Redirection Rules Match Plugin</h1>
+                     <p class="mt-2 text-lg text-slate-600">Automate your 301 redirection process with precision.</p>
+                </div>
+                 <div class="text-right space-y-2">
+                    <div>
+                        <p class="text-sm text-slate-600">Welcome, <span id="logged-in-user" class="font-bold">user</span></p>
+                        <button id="logout-btn" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">Sign out</button>
+                    </div>
+                    <div id="token-display" class="text-right bg-white p-3 rounded-lg shadow border">
+                        <p class="text-sm font-medium text-slate-500">Tokens Remaining</p>
+                        <p id="token-count" class="text-2xl font-bold text-indigo-600">0</p>
+                    </div>
+                    <button id="admin-dashboard-btn" class="hidden w-full justify-center rounded-md border border-transparent bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">Go to Admin Dashboard</button>
+                </div>
+            </header>
+            
+            <!-- How-to-Use Guide -->
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-md mb-8">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-lg font-medium text-blue-800">How to Use This Tool</h3>
+                        <div class="mt-2 text-sm text-blue-700">
+                            <ol class="list-decimal list-inside space-y-1">
+                                <li><strong>Upload Sitemaps:</strong> Provide both the old and new sitemap files (.xml or .txt).</li>
+                                <li><strong>Generate & Review:</strong> Click "Generate". This uses one token. Check the preview to see the results.</li>
+                                <li><strong>Adjust & Export:</strong> If many links go to the homepage, lower the "Smart Match Threshold" and run again. Once satisfied, click "Export to Excel".</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Left Column: Inputs & Controls -->
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-slate-200">
+                    <h2 class="text-2xl font-semibold mb-6 border-b pb-4">1. Provide Sitemaps</h2>
+                    <div class="mb-6">
+                        <label class="block text-lg font-medium text-slate-700 mb-2">Old Sitemap (Source URLs)</label>
+                        <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md"><div class="space-y-1 text-center"><svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg><div class="flex text-sm text-slate-600"><label for="old-sitemap-file" class="file-input-label relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500 p-1"><span>Upload a file</span><input id="old-sitemap-file" name="old-sitemap-file" type="file" class="sr-only"></label><p class="pl-1">or drag and drop</p></div><p class="text-xs text-slate-500" id="old-sitemap-filename">No file selected</p></div></div>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-lg font-medium text-slate-700 mb-2">New Sitemap (Target URLs)</label>
+                        <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md"><div class="space-y-1 text-center"><svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg><div class="flex text-sm text-slate-600"><label for="new-sitemap-file" class="file-input-label relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500 p-1"><span>Upload a file</span><input id="new-sitemap-file" name="new-sitemap-file" type="file" class="sr-only"></label><p class="pl-1">or drag and drop</p></div><p class="text-xs text-slate-500" id="new-sitemap-filename">No file selected</p></div></div>
+                    </div>
+                    <div class="mb-8">
+                        <label for="similarity-threshold" class="block text-lg font-medium text-slate-700">Smart Match Threshold: <span id="threshold-value" class="font-bold text-indigo-600">70%</span></label>
+                        <p class="text-sm text-slate-500 mb-3">Controls how similar URLs must be to create an automatic match. Lower is less strict.</p>
+                        <input id="similarity-threshold" type="range" min="30" max="95" value="70" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    <div class="pt-6 border-t">
+                        <button id="generate-btn" class="w-full flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-8 py-3 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-slate-400 disabled:cursor-not-allowed"><svg id="generate-icon" class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.562L16.25 22.5l-.648-1.938a3.375 3.375 0 00-2.684-2.684L11.25 18l1.938-.648a3.375 3.375 0 002.684-2.684L16.25 13.5l.648 1.938a3.375 3.375 0 002.684 2.684L21.75 18l-1.938.648a3.375 3.375 0 00-2.684 2.684z" /></svg><svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span id="generate-btn-text">Generate Redirection File</span></button>
+                    </div>
+                </div>
+                <!-- Right Column: Logs & Export -->
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-slate-200 flex flex-col">
+                    <h2 class="text-2xl font-semibold mb-4 border-b pb-4">2. Results & Export</h2>
+                    <div class="flex-grow flex flex-col min-h-0"><label class="block text-lg font-medium text-slate-700 mb-2">Activity Log</label><div id="activity-log" class="flex-grow bg-slate-100 rounded-md p-4 text-sm font-mono text-slate-600 overflow-y-auto h-64 border"><p class="text-slate-400">Awaiting sitemap files...</p></div></div><div id="results-container" class="mt-6 hidden"><h3 class="text-lg font-medium text-slate-700 mb-2">Redirection Match Preview</h3><div class="max-h-64 overflow-auto border rounded-lg"><table class="min-w-full divide-y divide-slate-200"><thead class="bg-slate-50"><tr><th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Source</th><th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Target</th><th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Match Type</th><th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Score</th></tr></thead><tbody id="results-preview" class="bg-white divide-y divide-slate-200"></tbody></table></div></div><div class="mt-6 pt-6 border-t"><button id="export-btn" class="w-full flex items-center justify-center rounded-md border border-transparent bg-emerald-600 px-8 py-3 text-base font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:bg-slate-400 disabled:cursor-not-allowed" disabled><svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>Export to Excel</button></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard (hidden by default) -->
+    <div id="admin-dashboard" class="hidden">
+        <div class="flex h-screen bg-slate-100">
+            <!-- Sidebar -->
+            <div class="hidden md:flex flex-col w-64 bg-slate-800">
+                <div class="flex items-center justify-center h-16 bg-slate-900">
+                    <span class="text-white font-bold uppercase">fikzdev Admin</span>
+                </div>
+                <div class="flex flex-col flex-1 overflow-y-auto">
+                    <nav class="flex-1 px-2 py-4 bg-slate-800">
+                        <a href="#" class="flex items-center px-4 py-2 text-slate-100 bg-slate-700 rounded-md">
+                            <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                            User Management
+                        </a>
+                        <button id="back-to-app-btn" class="flex items-center w-full px-4 py-2 mt-2 text-slate-400 hover:bg-slate-700 hover:text-slate-100 rounded-md">
+                             <svg class="h-6 w-6 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                               <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                             </svg>
+                            Back to App
+                        </button>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Main content -->
+            <div class="flex flex-col flex-1 overflow-y-auto">
+                <header class="flex items-center justify-between h-16 bg-white border-b border-slate-200">
+                    <div class="flex items-center px-4">
+                        <h1 class="text-2xl font-bold text-slate-800">Admin Dashboard</h1>
+                    </div>
+                    <div class="flex items-center pr-4">
+                         <button id="logout-btn-admin" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">Sign out</button>
+                    </div>
+                </header>
+                <main class="p-4 md:p-8">
+                    <!-- Stat Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white p-6 rounded-lg shadow"><h4 class="text-slate-500 font-medium">Total Users</h4><p id="metric-total-users" class="text-3xl font-bold mt-1">0</p></div>
+                        <div class="bg-white p-6 rounded-lg shadow"><h4 class="text-slate-500 font-medium">Pending Approvals</h4><p id="metric-pending" class="text-3xl font-bold mt-1">0</p></div>
+                        <div class="bg-white p-6 rounded-lg shadow"><h4 class="text-slate-500 font-medium">Active Trials</h4><p id="metric-active-trials" class="text-3xl font-bold mt-1">0</p></div>
+                        <div class="bg-white p-6 rounded-lg shadow"><h4 class="text-slate-500 font-medium">Banned Users</h4><p id="metric-banned" class="text-3xl font-bold mt-1">0</p></div>
+                    </div>
+
+                    <!-- Chart and User Management -->
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                        <div class="xl:col-span-2 bg-white p-6 rounded-lg shadow">
+                            <h2 class="text-xl font-semibold mb-4">User Activity (Last 7 Days)</h2>
+                            <canvas id="activityChart"></canvas>
+                        </div>
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <h2 class="text-xl font-semibold mb-4">Add New Member</h2>
+                            <form id="add-member-form" class="space-y-4">
+                                <div>
+                                    <label for="new-username" class="block text-sm font-medium text-slate-700">Username</label>
+                                    <input type="text" id="new-username" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
+                                </div>
+                                <div>
+                                    <label for="new-password" class="block text-sm font-medium text-slate-700">Password</label>
+                                    <input type="text" id="new-password" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" required>
+                                </div>
+                                <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Add Member</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- User List Table -->
+                    <div class="mt-8 bg-white rounded-lg shadow">
+                        <div class="p-6"><h2 class="text-xl font-semibold">User Management</h2></div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-slate-200">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Username</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Tokens</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="user-table-body" class="bg-white divide-y divide-slate-200">
+                                    <!-- User rows will be dynamically inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Payment Modal -->
+    <div id="payment-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 opacity-0 pointer-events-none">
+        <div class="modal-container bg-white w-full max-w-md p-8 rounded-2xl shadow-2xl text-center transform scale-95">
+            <h3 class="text-2xl font-bold text-slate-900">Free Trial Ended</h3>
+            <p class="text-slate-600 mt-2">To continue, please purchase more tokens.</p>
+            <div class="mt-6">
+                <img src="https://i.imgur.com/ADJ6f9d.jpeg" alt="Payment QR Code" class="mx-auto rounded-lg shadow-md w-64 h-64">
+                <p class="mt-4 font-bold text-lg text-slate-800">Buy me a coffee: RM 1</p>
+                <p class="mt-2 text-sm text-slate-500">After payment, please contact the admin to have your tokens refilled.</p>
+            </div>
+            <div class="mt-8">
+                 <button id="close-payment-btn" class="w-full text-sm text-slate-500 hover:text-slate-700">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center py-8">
+        <p class="text-sm text-slate-500">&copy; 2025 | Fully built by fikzdev</p>
+    </footer>
+
+    <script type="module">
+        // --- DOM Element References ---
+        const loginScreen = document.getElementById('login-screen');
+        const loginFormContainer = document.getElementById('login-form-container');
+        const loginModeSelection = document.getElementById('login-mode-selection');
+        const loginForm = document.getElementById('login-form');
+        const mainApp = document.getElementById('main-app');
+        const adminDashboard = document.getElementById('admin-dashboard');
+        const loggedInUser = document.getElementById('logged-in-user');
+        const logoutBtn = document.getElementById('logout-btn');
+        const logoutBtnAdmin = document.getElementById('logout-btn-admin');
+        const loginError = document.getElementById('login-error');
+        const tokenDisplay = document.getElementById('token-display');
+        const tokenCountEl = document.getElementById('token-count');
+        const adminDashboardBtn = document.getElementById('admin-dashboard-btn');
+        const backToAppBtn = document.getElementById('back-to-app-btn');
+        
+        const paymentModal = document.getElementById('payment-modal');
+        const closePaymentBtn = document.getElementById('close-payment-btn');
+
+        const showAdminLoginBtn = document.getElementById('show-admin-login-btn');
+        const showUserLoginBtn = document.getElementById('show-user-login-btn');
+        const backToLoginModeBtn = document.getElementById('back-to-login-mode');
+
+        let currentLoginMode = null;
+        let activityChart = null;
+
+        // --- Mock User Database (Simulates a real backend database) ---
+        function getDatabase() {
+            const db = localStorage.getItem('fikzdev_user_database_v3');
+            if (!db) {
+                const initialDb = {
+                    "test": { password: "test123", status: "Approved", tokens: 3 }
+                };
+                localStorage.setItem('fikzdev_user_database_v3', JSON.stringify(initialDb));
+                return initialDb;
+            }
+            return JSON.parse(db);
+        }
+
+        function saveDatabase(db) {
+            localStorage.setItem('fikzdev_user_database_v3', JSON.stringify(db));
+        }
+        
+        // --- Authentication & View Management ---
+        function handleLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('api-credential').value;
+            let userIsValid = false;
+
+            if (currentLoginMode === 'admin') {
+                if (username === 'fikzdev' && password === 'API-FIKZ-67890') {
+                    userIsValid = true;
+                }
+            } else {
+                const users = getDatabase();
+                const user = users[username];
+                if (user && user.password === password && user.status !== 'Banned' && user.status !== 'Pending') {
+                    userIsValid = true;
+                } else if (user && (user.status === 'Banned' || user.status === 'Pending')) {
+                     loginError.textContent = `Account status: ${user.status}. Contact admin.`;
+                     loginError.classList.remove('hidden');
+                     return;
+                }
+            }
+            
+            if (userIsValid) {
+                loginError.classList.add('hidden');
+                sessionStorage.setItem('loggedInUser', username); 
+                showMainApp();
+            } else {
+                loginError.textContent = 'Invalid username or password.';
+                loginError.classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            sessionStorage.removeItem('loggedInUser');
+            window.location.reload();
+        }
+
+        function showView(view) {
+            loginScreen.classList.add('hidden');
+            mainApp.classList.add('hidden');
+            adminDashboard.classList.add('hidden');
+            if (view === 'login') loginScreen.classList.remove('hidden');
+            if (view === 'app') mainApp.classList.remove('hidden');
+            if (view === 'dashboard') adminDashboard.classList.remove('hidden');
+        }
+
+        function showMainApp() {
+            const username = sessionStorage.getItem('loggedInUser');
+            if (username) {
+                loggedInUser.textContent = username;
+                if (username === 'fikzdev') {
+                    tokenDisplay.classList.add('hidden');
+                    adminDashboardBtn.classList.remove('hidden');
+                } else {
+                    const users = getDatabase();
+                    const user = users[username];
+                    tokenDisplay.classList.remove('hidden');
+                    tokenCountEl.textContent = user.tokens;
+                    adminDashboardBtn.classList.add('hidden');
+                }
+                showView('app');
+            }
+        }
+
+        function showAdminDashboard() {
+            showView('dashboard');
+            renderAdminDashboard();
+        }
+        
+        function checkSession() {
+            if (sessionStorage.getItem('loggedInUser')) {
+                showMainApp();
+            } else {
+                showView('login');
+                loginModeSelection.classList.remove('hidden');
+                loginFormContainer.classList.add('hidden');
+            }
+        }
+
+        // --- UI Toggling for Login ---
+        function showLoginForm(mode) {
+            currentLoginMode = mode;
+            loginModeSelection.classList.add('hidden');
+            loginFormContainer.classList.remove('hidden');
+            loginError.classList.add('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('api-credential').value = '';
+        }
+
+        // --- Payment Modal Logic ---
+        function showPaymentModal() {
+            paymentModal.classList.remove('opacity-0', 'pointer-events-none');
+            paymentModal.querySelector('.modal-container').classList.remove('scale-95');
+        }
+        function hidePaymentModal() {
+            paymentModal.classList.add('opacity-0', 'pointer-events-none');
+            paymentModal.querySelector('.modal-container').classList.add('scale-95');
+        }
+        
+        // --- Event Listeners ---
+        loginForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            handleLogin();
+        });
+        logoutBtn.addEventListener('click', handleLogout);
+        logoutBtnAdmin.addEventListener('click', handleLogout);
+        closePaymentBtn.addEventListener('click', hidePaymentModal);
+        adminDashboardBtn.addEventListener('click', showAdminDashboard);
+        backToAppBtn.addEventListener('click', showMainApp);
+        showAdminLoginBtn.addEventListener('click', () => showLoginForm('admin'));
+        showUserLoginBtn.addEventListener('click', () => showLoginForm('user'));
+        backToLoginModeBtn.addEventListener('click', () => {
+            loginModeSelection.classList.remove('hidden');
+            loginFormContainer.classList.add('hidden');
+        });
+        
+        // --- Initialize on page load ---
+        checkSession();
+
+        // --- Admin Dashboard Logic ---
+        function renderAdminDashboard() {
+            const db = getDatabase();
+            const users = Object.keys(db);
+            const tableBody = document.getElementById('user-table-body');
+            tableBody.innerHTML = ''; 
+
+            let pendingCount = 0;
+            let activeTrialCount = 0;
+            let bannedCount = 0;
+
+            users.forEach(username => {
+                const user = db[username];
+                if (user.status === 'Pending') pendingCount++;
+                if (user.status === 'Approved' && user.tokens > 0) activeTrialCount++;
+                if (user.status === 'Banned') bannedCount++;
+
+                let actionButtons = '';
+                let statusBadge = '';
+
+                switch(user.status) {
+                    case 'Pending':
+                        statusBadge = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>`;
+                        actionButtons = `<button onclick="window.adminActions.approveUser('${username}')" class="text-green-600 hover:text-green-900">Approve</button>`;
+                        break;
+                    case 'Approved':
+                        statusBadge = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Approved</span>`;
+                        actionButtons = `
+                            <button onclick="window.adminActions.banUser('${username}')" class="text-red-600 hover:text-red-900 mr-4">Ban</button>
+                            <button onclick="window.adminActions.refillTokens('${username}')" class="text-indigo-600 hover:text-indigo-900">Refill</button>
+                        `;
+                        break;
+                    case 'Banned':
+                         statusBadge = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Banned</span>`;
+                        actionButtons = `<button onclick="window.adminActions.activateUser('${username}')" class="text-blue-600 hover:text-blue-900">Activate</button>`;
+                        break;
+                }
+
+                const row = `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">${username}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${statusBadge}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-mono">${user.tokens}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                            ${actionButtons}
+                        </td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+
+            // Update metrics
+            document.getElementById('metric-total-users').textContent = users.length;
+            document.getElementById('metric-pending').textContent = pendingCount;
+            document.getElementById('metric-active-trials').textContent = activeTrialCount;
+            document.getElementById('metric-banned').textContent = bannedCount;
+            
+            // Render chart
+            renderActivityChart();
+        }
+
+        function renderActivityChart() {
+            const ctx = document.getElementById('activityChart').getContext('2d');
+            if (activityChart) {
+                activityChart.destroy();
+            }
+            activityChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['6 days ago', '5 days ago', '4 days ago', '3 days ago', 'Yesterday', 'Today'],
+                    datasets: [{
+                        label: 'Generations',
+                        data: [12, 19, 3, 5, 2, 3], // Mock data
+                        borderColor: 'rgb(79, 70, 229)',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        document.getElementById('add-member-form').addEventListener('submit', () => {
+            const usernameInput = document.getElementById('new-username');
+            const passwordInput = document.getElementById('new-password');
+            const newUsername = usernameInput.value.trim();
+            const newPassword = passwordInput.value.trim();
+            
+            if (!newUsername || !newPassword) {
+                alert('Please provide both a username and a password.');
+                return;
+            }
+            
+            const db = getDatabase();
+            if (db[newUsername]) {
+                alert('This username already exists.');
+                return;
+            }
+
+            db[newUsername] = { password: newPassword, status: 'Pending', tokens: 0 };
+            saveDatabase(db);
+            renderAdminDashboard();
+            
+            usernameInput.value = '';
+            passwordInput.value = '';
+            alert(`User "${newUsername}" added. They are pending approval.`);
+        });
+        
+        // Expose admin actions to global scope to be called from inline onclick
+        window.adminActions = {
+            approveUser: (username) => {
+                const db = getDatabase();
+                if (db[username]) {
+                    db[username].status = 'Approved';
+                    db[username].tokens = 10;
+                    saveDatabase(db);
+                    renderAdminDashboard();
+                }
+            },
+            banUser: (username) => {
+                const db = getDatabase();
+                if (db[username]) {
+                    db[username].status = 'Banned';
+                    saveDatabase(db);
+                    renderAdminDashboard();
+                }
+            },
+            activateUser: (username) => {
+                const db = getDatabase();
+                if (db[username]) {
+                    db[username].status = 'Approved';
+                    if(db[username].tokens <= 0) {
+                        db[username].tokens = 10;
+                    }
+                    saveDatabase(db);
+                    renderAdminDashboard();
+                }
+            },
+            refillTokens: (username) => {
+                const db = getDatabase();
+                if (db[username]) {
+                    db[username].tokens = 10;
+                    saveDatabase(db);
+                    renderAdminDashboard();
+                }
+            }
+        };
+
+
+        // =================================================================
+        // == ALL THE PREVIOUS REDIRECTION LOGIC REMAINS UNCHANGED BELOW ==
+        // =================================================================
+        const oldSitemapFileInput = document.getElementById('old-sitemap-file');
+        const newSitemapFileInput = document.getElementById('new-sitemap-file');
+        const oldSitemapFilename = document.getElementById('old-sitemap-filename');
+        const newSitemapFilename = document.getElementById('new-sitemap-filename');
+        const generateBtn = document.getElementById('generate-btn');
+        const generateBtnText = document.getElementById('generate-btn-text');
+        const exportBtn = document.getElementById('export-btn');
+        const activityLog = document.getElementById('activity-log');
+        const resultsContainer = document.getElementById('results-container');
+        const resultsPreview = document.getElementById('results-preview');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const generateIcon = document.getElementById('generate-icon');
+        const thresholdSlider = document.getElementById('similarity-threshold');
+        const thresholdValue = document.getElementById('threshold-value');
+
+        let oldSitemapContent = null;
+        let newSitemapContent = null;
+        let finalRedirectionRules = [];
+
+        oldSitemapFileInput.addEventListener('change', (e) => handleFileSelect(e, 'old'));
+        newSitemapFileInput.addEventListener('change', (e) => handleFileSelect(e, 'new'));
+        thresholdSlider.addEventListener('input', (e) => {
+            thresholdValue.textContent = `${e.target.value}%`;
+        });
+        generateBtn.addEventListener('click', handleGenerateClick);
+        exportBtn.addEventListener('click', exportToExcel);
+
+        function handleGenerateClick() {
+            const username = sessionStorage.getItem('loggedInUser');
+            if (username === 'fikzdev') {
+                processRedirections();
+                return;
+            }
+
+            const db = getDatabase();
+            const user = db[username];
+
+            if (user && user.tokens > 0) {
+                user.tokens--;
+                saveDatabase(db);
+                tokenCountEl.textContent = user.tokens;
+                processRedirections();
+            } else {
+                logActivity('You have no tokens remaining. Please buy me a coffee to continue.', 'ERROR');
+                showPaymentModal();
+            }
+        }
+
+        function logActivity(message, type = 'INFO') {
+            if (activityLog.innerHTML.includes('Awaiting sitemap files...')) {
+                activityLog.innerHTML = '';
+            }
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                INFO: 'text-slate-600',
+                SUCCESS: 'text-emerald-600',
+                WARN: 'text-amber-600',
+                ERROR: 'text-red-600',
+            };
+            const logEntry = document.createElement('p');
+            logEntry.className = `pb-1 ${colors[type]}`;
+            logEntry.innerHTML = `<span class="font-semibold">[${timestamp}]</span> ${message}`;
+            activityLog.appendChild(logEntry);
+            activityLog.scrollTop = activityLog.scrollHeight;
+        }
+
+        function handleFileSelect(event, type) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (type === 'old') {
+                    oldSitemapContent = e.target.result;
+                    oldSitemapFilename.textContent = file.name;
+                    logActivity(`Loaded Old Sitemap file: ${file.name}`);
+                } else {
+                    newSitemapContent = e.target.result;
+                    newSitemapFilename.textContent = file.name;
+                    logActivity(`Loaded New Sitemap file: ${file.name}`);
+                }
+            };
+            reader.onerror = () => {
+                logActivity(`Error reading file: ${file.name}`, 'ERROR');
+            };
+            reader.readAsText(file);
+        }
+
+        function parseSitemap(content) {
+            if (!content) return [];
+            if (content.trim().startsWith('<')) {
+                 const parser = new DOMParser();
+                 const xmlDoc = parser.parseFromString(content, "text/xml");
+                 const locs = xmlDoc.getElementsByTagName('loc');
+                 return Array.from(locs).map(loc => loc.textContent.trim());
+            } else {
+                return content.split(/\r?\n/).map(line => line.trim()).filter(line => line.startsWith('http'));
+            }
+        }
+
+        function getUrlPath(urlString) {
+            try {
+                const url = new URL(urlString);
+                return url.pathname;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function calculateSimilarity(s1, s2) {
+            let longer = s1;
+            let shorter = s2;
+            if (s1.length < s2.length) {
+                longer = s2;
+                shorter = s1;
+            }
+            const longerLength = longer.length;
+            if (longerLength === 0) return 1.0;
+            const editDistance = (s1, s2) => {
+                s1 = s1.toLowerCase();
+                s2 = s2.toLowerCase();
+                const costs = [];
+                for (let i = 0; i <= s1.length; i++) {
+                    let lastValue = i;
+                    for (let j = 0; j <= s2.length; j++) {
+                        if (i === 0) {
+                            costs[j] = j;
+                        } else {
+                            if (j > 0) {
+                                let newValue = costs[j - 1];
+                                if (s1.charAt(i - 1) !== s2.charAt(j - 1)) {
+                                    newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+                                }
+                                costs[j - 1] = lastValue;
+                                lastValue = newValue;
+                            }
+                        }
+                    }
+                    if (i > 0) costs[s2.length] = lastValue;
+                }
+                return costs[s2.length];
+            };
+            return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength);
+        }
+        
+        async function processRedirections() {
+            if (!oldSitemapContent || !newSitemapContent) {
+                logActivity('Please upload both old and new sitemap files.', 'ERROR');
+                return;
+            }
+            setLoadingState(true);
+            finalRedirectionRules = [];
+            resultsPreview.innerHTML = '';
+            resultsContainer.classList.add('hidden');
+            activityLog.innerHTML = '';
+            logActivity('Starting redirection matching process...', 'INFO');
+            await new Promise(resolve => setTimeout(resolve, 50));
+            try {
+                const oldUrls = parseSitemap(oldSitemapContent);
+                const newUrls = parseSitemap(newSitemapContent);
+                logActivity(`Parsed ${oldUrls.length} URLs from Old Sitemap.`, 'INFO');
+                logActivity(`Parsed ${newUrls.length} URLs from New Sitemap.`, 'INFO');
+                if (newUrls.length === 0) {
+                    logActivity('New Sitemap is empty. Cannot process.', 'ERROR');
+                    setLoadingState(false);
+                    return;
+                }
+                const newHomepageUrl = new URL(newUrls[0]).origin + '/';
+                logActivity(`Target homepage set to: ${newHomepageUrl}`, 'INFO');
+                const newUrlMap = new Map();
+                newUrls.forEach(url => {
+                    const path = getUrlPath(url);
+                    if (path) newUrlMap.set(path, url);
+                });
+                const newUrlPaths = Array.from(newUrlMap.keys());
+                logActivity(`Created lookup map with ${newUrlMap.size} unique new paths.`, 'INFO');
+                const processedSources = new Set();
+                let exactMatchCount = 0;
+                let smartMatchCount = 0;
+                let homepageRedirectCount = 0;
+                const CHUNK_SIZE = 500;
+                const SIMILARITY_THRESHOLD = parseInt(thresholdSlider.value, 10) / 100;
+                logActivity(`Using a Smart Match Threshold of ${thresholdSlider.value}%.`, 'INFO');
+                for (let i = 0; i < oldUrls.length; i++) {
+                    const oldUrl = oldUrls[i];
+                    const oldPath = getUrlPath(oldUrl);
+                    if (!oldPath || processedSources.has(oldPath)) continue;
+                    processedSources.add(oldPath);
+                    if (newUrlMap.has(oldPath)) {
+                        exactMatchCount++;
+                    } else {
+                        let bestMatch = { url: newHomepageUrl, score: 0 };
+                        for (const newPath of newUrlPaths) {
+                            const score = calculateSimilarity(oldPath, newPath);
+                            if (score > bestMatch.score) {
+                                bestMatch = { url: newUrlMap.get(newPath), score: score };
+                            }
+                        }
+                        let targetUrl;
+                        let matchType;
+                        if (bestMatch.score >= SIMILARITY_THRESHOLD) {
+                            targetUrl = bestMatch.url;
+                            matchType = 'Smart Match';
+                            smartMatchCount++;
+                        } else {
+                            targetUrl = newHomepageUrl;
+                            matchType = 'Homepage Fallback';
+                            homepageRedirectCount++;
+                        }
+                        finalRedirectionRules.push({
+                            source: oldPath,
+                            target: targetUrl,
+                            regex: 0,
+                            code: 301,
+                            type: 'url',
+                            match: 'url',
+                            hits: '',
+                            title: 'active',
+                            status: '',
+                            matchType: matchType,
+                            score: `${(bestMatch.score * 100).toFixed(0)}%`
+                        });
+                    }
+                    if ((i + 1) % CHUNK_SIZE === 0 && i < oldUrls.length - 1) {
+                        logActivity(`Processing... Analyzed ${i + 1} of ${oldUrls.length} URLs.`, 'INFO');
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+                logActivity(`${exactMatchCount} URLs had exact matches and were ignored.`, 'INFO');
+                logActivity(`Created ${smartMatchCount} smart redirections to similar URLs.`, 'SUCCESS');
+                logActivity(`Created ${homepageRedirectCount} redirections to the homepage as a fallback.`, 'INFO');
+                updateResultsPreview();
+                exportBtn.disabled = false;
+                logActivity('Process complete. You can now preview and export.', 'SUCCESS');
+            } catch (error) {
+                logActivity(`An unexpected error occurred: ${error.message}`, 'ERROR');
+                console.error(error);
+            } finally {
+                setLoadingState(false);
+            }
+        }
+
+        function updateResultsPreview() {
+            if (finalRedirectionRules.length > 0) {
+                resultsContainer.classList.remove('hidden');
+                let previewHtml = '';
+                const previewData = finalRedirectionRules.slice(0, 50); 
+                previewData.forEach(rule => {
+                    const scoreColor = rule.matchType === 'Smart Match' ? 'text-emerald-600' : 'text-amber-600';
+                    previewHtml += `
+                        <tr>
+                            <td class="px-4 py-2 whitespace-nowrap text-sm text-slate-700 break-all">${rule.source}</td>
+                            <td class="px-4 py-2 whitespace-nowrap text-sm text-slate-700 break-all">${rule.target}</td>
+                            <td class="px-4 py-2 whitespace-nowrap text-sm text-slate-700">${rule.matchType}</td>
+                            <td class="px-4 py-2 whitespace-nowrap text-sm font-medium ${scoreColor}">${rule.score}</td>
+                        </tr>
+                    `;
+                });
+                if(finalRedirectionRules.length > 50) {
+                    previewHtml += `<tr><td colspan="4" class="text-center p-2 text-sm text-slate-500">...and ${finalRedirectionRules.length - 50} more rows.</td></tr>`;
+                }
+                resultsPreview.innerHTML = previewHtml;
+            }
+        }
+
+        function setLoadingState(isLoading) {
+            generateBtn.disabled = isLoading;
+            if (isLoading) {
+                loadingSpinner.classList.remove('hidden');
+                generateIcon.classList.add('hidden');
+                generateBtnText.textContent = 'Processing...';
+            } else {
+                loadingSpinner.classList.add('hidden');
+                generateIcon.classList.remove('hidden');
+                generateBtnText.textContent = 'Generate Redirection File';
+            }
+        }
+
+        function exportToExcel() {
+            if (finalRedirectionRules.length === 0 && (!oldSitemapContent || parseSitemap(oldSitemapContent).length === 0)) {
+                logActivity('No data available to export.', 'WARN');
+                return;
+            }
+            logActivity('Generating Excel file...', 'INFO');
+            try {
+                const wb = XLSX.utils.book_new();
+                const oldRedirectionData = parseSitemap(oldSitemapContent).map(url => ({ URL: url }));
+                const newRedirectionData = parseSitemap(newSitemapContent).map(url => ({ URL: url }));
+                const exportRules = finalRedirectionRules.map(({ source, target, regex, code, type, match, hits, title, status }) => ({
+                    source, target, regex, code, type, match, hits, title, status
+                }));
+                const wsOld = XLSX.utils.json_to_sheet(oldRedirectionData);
+                const wsNew = XLSX.utils.json_to_sheet(newRedirectionData);
+                const wsMatch = XLSX.utils.json_to_sheet(exportRules);
+                XLSX.utils.book_append_sheet(wb, wsOld, "Old Redirection Sheet");
+                XLSX.utils.book_append_sheet(wb, wsNew, "New Redirection Sheet");
+                XLSX.utils.book_append_sheet(wb, wsMatch, "Redirection Match");
+                XLSX.writeFile(wb, "redirection_rules.xlsx");
+                logActivity('Excel file has been downloaded successfully.', 'SUCCESS');
+            } catch (error) {
+                logActivity(`Failed to generate Excel file: ${error.message}`, 'ERROR');
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
